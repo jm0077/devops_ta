@@ -1,10 +1,8 @@
 trigger:
-  - main
+  - master
 
 variables:
   - group: azure-credentials
-  - name: vmImageName
-    value: 'ubuntu-latest'
 
 stages:
 - stage: Build
@@ -13,7 +11,7 @@ stages:
   - job: BuildAndTest
     displayName: Build and Test
     pool:
-      vmImage: $(vmImageName)
+      name: 'Default'
     
     steps:
     - task: UsePythonVersion@0
@@ -81,7 +79,7 @@ stages:
     displayName: Deploy to AKS Dev
     environment: development
     pool:
-      vmImage: $(vmImageName)
+      name: 'Default'
     strategy:
       runOnce:
         deploy:
@@ -107,7 +105,7 @@ stages:
     displayName: Deploy to AKS Prod
     environment: production
     pool:
-      vmImage: $(vmImageName)
+      name: 'Default'
     strategy:
       runOnce:
         deploy:
