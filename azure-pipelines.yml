@@ -18,20 +18,29 @@ stages:
     
     steps:
     - script: |
-        which python
-        python --version
-      displayName: 'Check Python version'
-    
-    - script: |
-        python -m pip install --user --upgrade pip
-        python -m pip install --user -r requirements.txt
+        python -m venv venv
+        source venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
       displayName: 'Install dependencies'
     
     - script: |
-        python -m pip install --user pytest pytest-cov
+        source venv/bin/activate
         export PYTHONPATH=$(pwd)/src:$PYTHONPATH
-        python -m pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=src --cov-report=xml --cov-report=html
+        pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=src --cov-report=xml --cov-report=html
       displayName: 'Run tests'
+    
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFiles: '**/test-*.xml'
+        testRunTitle: 'Publish test results'
+    
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
     
     - task: SonarCloudPrepare@1
       inputs:
@@ -46,33 +55,11 @@ stages:
           sonar.python.coverage.reportPaths=coverage.xml
           sonar.python.xunit.reportPath=junit/test-results.xml
     
-    - task: PublishTestResults@2
-      condition: succeededOrFailed()
-      inputs:
-        testResultsFiles: '**/test-*.xml'
-        testRunTitle: 'Publish test results'
-    
-    - task: PublishCodeCoverageResults@1
-      inputs:
-        codeCoverageTool: Cobertura
-        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-        reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
-    
     - task: SonarCloudAnalyze@1
     
     - task: SonarCloudPublish@1
       inputs:
         pollingTimeoutSec: '300'
-    
-    - task: Docker@2
-      inputs:
-        containerRegistry: '$(ACR_SERVICE_CONNECTION)'
-        repository: '$(IMAGE_REPOSITORY_NAME)'
-        command: 'buildAndPush'
-        Dockerfile: '**/Dockerfile'
-        tags: |
-          $(Build.BuildId)
-          latest
 
 - stage: DeployToDev
   displayName: Deploy to Dev
