@@ -1,0 +1,65 @@
+# Entornos virtuales
+venv/
+env/
+*.env
+
+# Archivos de Python
+*.py[cod]
+__pycache__/
+*.so
+
+# Distribución / empaquetado
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs y bases de datos
+*.log
+*.sqlite3
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de IDE y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Archivos de Azure
+.azure/
+
+# Archivos de configuración local
+local_settings.py
+
+# Archivos de cobertura de pruebas
+.coverage
+htmlcov/
+
+# Archivos temporales
+*.tmp
+*.bak
+*.swp
+*~
+
+# Archivos de Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Archivos de Docker
+.docker/

@@ -1,0 +1,96 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DevOps TA API",
+    "description": "API para el proyecto DevOps TA",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://apim-devops-ta.azure-api.net"
+    }
+  ],
+  "paths": {
+    "/DevOps": {
+      "post": {
+        "summary": "Enviar mensaje",
+        "description": "Endpoint para enviar un mensaje",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mensaje enviado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error en la solicitud",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "ERROR"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MessageInput": {
+        "type": "object",
+        "required": ["message", "to", "from", "timeToLifeSec"],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "timeToLifeSec": {
+            "type": "integer"
+          }
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Parse-REST-API-Key"
+      }
+    }
+  }
+}

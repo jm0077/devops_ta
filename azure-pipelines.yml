@@ -1,0 +1,108 @@
+trigger:
+  - main
+  - develop
+
+variables:
+  - group: azure-credentials
+
+stages:
+- stage: Build
+  jobs:
+  - job: BuildAndTest
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.9'
+    
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
+    
+    - script: |
+        pylint **/*.py
+      displayName: 'Run Pylint'
+    
+    - task: SonarCloudPrepare@1
+      inputs:
+        SonarCloud: 'SonarCloud'
+        organization: 'your-sonarcloud-organization'
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: 'your-project-key'
+        cliProjectName: 'Your Project Name'
+        cliSources: '.'
+    
+    - script: |
+        coverage run -m unittest discover tests
+        coverage xml
+      displayName: 'Run tests with coverage'
+    
+    - task: SonarCloudAnalyze@1
+    
+    - task: SonarCloudPublish@1
+      inputs:
+        pollingTimeoutSec: '300'
+    
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: 'cobertura'
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+    
+    - task: Docker@2
+      inputs:
+        containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+        repository: '$(IMAGE_REPOSITORY_NAME)'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        tags: |
+          $(Build.BuildId)
+          latest
+
+- stage: DeployToDev
+  condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployToAKSDev
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'development'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              namespace: 'dev'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yml
+                $(Pipeline.Workspace)/manifests/service.yml
+              imagePullSecrets: |
+                $(IMAGE_PULL_SECRET_NAME)
+              containers: |
+                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+
+- stage: DeployToProd
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployToAKSProd
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              namespace: 'prod'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yml
+                $(Pipeline.Workspace)/manifests/service.yml
+              imagePullSecrets: |
+                $(IMAGE_PULL_SECRET_NAME)
+              containers: |
+                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
