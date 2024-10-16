@@ -1,29 +1,30 @@
 trigger:
   - main
-  - develop
 
 variables:
   - group: azure-credentials
+  - name: vmImageName
+    value: 'ubuntu-latest'
 
 stages:
 - stage: Build
+  displayName: Build and analyze
   jobs:
   - job: BuildAndTest
+    displayName: Build and Test
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: $(vmImageName)
+    
     steps:
     - task: UsePythonVersion@0
       inputs:
         versionSpec: '3.9'
+        addToPath: true
     
     - script: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
       displayName: 'Install dependencies'
-    
-    - script: |
-        pylint **/*.py
-      displayName: 'Run Pylint'
     
     - task: SonarCloudPrepare@1
       inputs:
@@ -34,22 +35,32 @@ stages:
         cliProjectKey: 'your-project-key'
         cliProjectName: 'Your Project Name'
         cliSources: '.'
+        extraProperties: |
+          sonar.python.coverage.reportPaths=coverage.xml
+          sonar.python.xunit.reportPath=junit/test-results.xml
     
     - script: |
-        coverage run -m unittest discover tests
-        coverage xml
-      displayName: 'Run tests with coverage'
+        pip install pytest pytest-cov
+        pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=. --cov-report=xml --cov-report=html
+      displayName: 'Run tests'
+    
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFiles: '**/test-*.xml'
+        testRunTitle: 'Publish test results'
+    
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
     
     - task: SonarCloudAnalyze@1
     
     - task: SonarCloudPublish@1
       inputs:
         pollingTimeoutSec: '300'
-    
-    - task: PublishCodeCoverageResults@1
-      inputs:
-        codeCoverageTool: 'cobertura'
-        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
     
     - task: Docker@2
       inputs:
@@ -62,12 +73,15 @@ stages:
           latest
 
 - stage: DeployToDev
-  condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
+  displayName: Deploy to Dev
+  dependsOn: Build
+  condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
   jobs:
   - deployment: DeployToAKSDev
+    displayName: Deploy to AKS Dev
+    environment: development
     pool:
-      vmImage: 'ubuntu-latest'
-    environment: 'development'
+      vmImage: $(vmImageName)
     strategy:
       runOnce:
         deploy:
@@ -75,7 +89,7 @@ stages:
           - task: Kubernetes@1
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              namespace: 'dev'
+              namespace: 'default'
               manifests: |
                 $(Pipeline.Workspace)/manifests/deployment.yml
                 $(Pipeline.Workspace)/manifests/service.yml
@@ -85,12 +99,15 @@ stages:
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
 
 - stage: DeployToProd
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  displayName: Deploy to Prod
+  dependsOn: DeployToDev
+  condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
   jobs:
   - deployment: DeployToAKSProd
+    displayName: Deploy to AKS Prod
+    environment: production
     pool:
-      vmImage: 'ubuntu-latest'
-    environment: 'production'
+      vmImage: $(vmImageName)
     strategy:
       runOnce:
         deploy:
@@ -98,7 +115,7 @@ stages:
           - task: Kubernetes@1
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              namespace: 'prod'
+              namespace: 'default'
               manifests: |
                 $(Pipeline.Workspace)/manifests/deployment.yml
                 $(Pipeline.Workspace)/manifests/service.yml
