@@ -28,7 +28,8 @@ class TestDevOpsEndpoint(unittest.TestCase):
         }
         response = self.app.post('/DevOps', headers=headers, data=json.dumps(data))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(json.loads(response.data), {"message": "Hello Juan Perez your message will be send"})
+        response_data = json.loads(response.data.decode('utf-8'))
+        self.assertEqual(response_data, {"message": "Hello Juan Perez your message will be send"})
 
     def test_invalid_api_key(self):
         headers = {

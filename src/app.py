@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from functools import wraps
 import jwt
-import datetime
 
 app = Flask(__name__)
 
@@ -19,7 +18,7 @@ def require_apikey(view_function):
 
 def verify_jwt(token):
     try:
-        decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         return True
     except:
         return False
