@@ -23,9 +23,14 @@ stages:
       displayName: 'Check Python version'
     
     - script: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install --user --upgrade pip
+        python -m pip install --user -r requirements.txt
       displayName: 'Install dependencies'
+    
+    - script: |
+        python -m pip install --user pytest pytest-cov
+        python -m pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=. --cov-report=xml --cov-report=html
+      displayName: 'Run tests'
     
     - task: SonarCloudPrepare@1
       inputs:
@@ -39,11 +44,6 @@ stages:
         extraProperties: |
           sonar.python.coverage.reportPaths=coverage.xml
           sonar.python.xunit.reportPath=junit/test-results.xml
-    
-    - script: |
-        pip install pytest pytest-cov
-        pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=. --cov-report=xml --cov-report=html
-      displayName: 'Run tests'
     
     - task: PublishTestResults@2
       condition: succeededOrFailed()
