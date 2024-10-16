@@ -1,5 +1,8 @@
 trigger:
-  - master
+  branches:
+    include:
+      - master
+      - dev
 
 variables:
   - group: azure-credentials
@@ -73,7 +76,7 @@ stages:
 - stage: DeployToDev
   displayName: Deploy to Dev
   dependsOn: Build
-  condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
   jobs:
   - deployment: DeployToAKSDev
     displayName: Deploy to AKS Dev
@@ -98,8 +101,8 @@ stages:
 
 - stage: DeployToProd
   displayName: Deploy to Prod
-  dependsOn: DeployToDev
-  condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: DeployToAKSProd
     displayName: Deploy to AKS Prod
