@@ -29,6 +29,7 @@ stages:
     
     - script: |
         python -m pip install --user pytest pytest-cov
+        export PYTHONPATH=$(pwd)/src:$PYTHONPATH
         python -m pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=src --cov-report=xml --cov-report=html
       displayName: 'Run tests'
     
