@@ -61,7 +61,6 @@ stages:
       inputs:
         pollingTimeoutSec: '300'
 
-    # Docker build and push task actualizado con los nombres correctos
     - task: Docker@2
       displayName: Build and push Docker image
       inputs:
@@ -89,17 +88,15 @@ stages:
           steps:
           - checkout: self
           
-          # Crear/Actualizar el image pull secret usando las variables existentes
           - task: Kubernetes@1
             displayName: Create/Update ImagePullSecret
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
               command: 'create'
-              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=acrdevopsta.azurecr.io --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run=client -o yaml | kubectl apply -f -'
+              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
           
-          # Actualizar los archivos de manifiesto
           - task: replacetokens@3
             inputs:
               targetFiles: |
@@ -110,27 +107,19 @@ stages:
               writeBOM: true
               actionOnMissing: 'warn'
               
-          # Aplicar los manifests de Kubernetes
           - task: Kubernetes@1
             displayName: Deploy to AKS
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
-              command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests/deployment.yml'
-              arguments: '--force'
-              
-          - task: Kubernetes@1
-            displayName: Deploy Service
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests/service.yml'
+              manifests: |
+                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
+                $(System.DefaultWorkingDirectory)/manifests/service.yml
+              imagePullSecrets: |
+                $(IMAGE_PULL_SECRET_NAME)
+              containers: |
+                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -148,17 +137,15 @@ stages:
           steps:
           - checkout: self
           
-          # Crear/Actualizar el image pull secret usando las variables existentes
           - task: Kubernetes@1
             displayName: Create/Update ImagePullSecret
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
               command: 'create'
-              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=acrdevopsta.azurecr.io --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run=client -o yaml | kubectl apply -f -'
+              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
           
-          # Actualizar los archivos de manifiesto
           - task: replacetokens@3
             inputs:
               targetFiles: |
@@ -169,24 +156,16 @@ stages:
               writeBOM: true
               actionOnMissing: 'warn'
               
-          # Aplicar los manifests de Kubernetes
           - task: Kubernetes@1
             displayName: Deploy to AKS
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
-              command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests/deployment.yml'
-              arguments: '--force'
-              
-          - task: Kubernetes@1
-            displayName: Deploy Service
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests/service.yml'
+              manifests: |
+                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
+                $(System.DefaultWorkingDirectory)/manifests/service.yml
+              imagePullSecrets: |
+                $(IMAGE_PULL_SECRET_NAME)
+              containers: |
+                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
