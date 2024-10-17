@@ -186,7 +186,7 @@ stages:
       runOnce:
         deploy:
           steps:
-         - checkout: self
+          - checkout: self
 
           # Instalar dependencias necesarias
           - script: |
