@@ -98,109 +98,74 @@ stages:
         deploy:
           steps:
           - checkout: self
-          
-          - task: Kubernetes@1
-            displayName: Delete existing secret
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              namespace: 'default'
-              command: 'delete'
-              arguments: 'secret $(IMAGE_PULL_SECRET_NAME) --ignore-not-found'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
-          - task: Kubernetes@1
-            displayName: Create new secret
+          # Instalar Helm y herramientas necesarias
+          - task: HelmInstaller@1
             inputs:
-              connectionType: 'Kubernetes Service Connection'
-              namespace: 'default'
-              command: 'create'
-              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD)'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
+              helmVersionToInstall: 'latest'
 
-          - task: Kubernetes@1
-            displayName: Deploy to AKS
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              namespace: 'default'
-              command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests'
-              secretType: 'dockerRegistry'
-              containerRegistryType: 'Azure Container Registry'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-
-          - task: Bash@3
-            displayName: 'Debug Kubernetes Deployment'
-            inputs:
-              targetType: 'inline'
-              script: |
-                kubectl get pods -n default
-                kubectl get services -n default
-                kubectl get deployments -n default
-                kubectl describe deployment microservice-deployment -n default
-                kubectl get events --sort-by='.metadata.creationTimestamp' -n default
-                
-          - task: HelmDeploy@0
+          # Instalar NGINX Ingress Controller
+          - script: |
+              helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+              helm repo update
+              helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+                --namespace default \
+                --set controller.replicaCount=2 \
+                --set controller.nodeSelector."kubernetes\.io/os"=linux \
+                --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
             displayName: 'Install NGINX Ingress Controller'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'repo'
-              arguments: 'add ingress-nginx https://kubernetes.github.io/ingress-nginx'
 
-          - task: HelmDeploy@0
-            displayName: 'Update Helm repos'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'repo'
-              arguments: 'update'
-
-          - task: HelmDeploy@0
-            displayName: 'Deploy NGINX Ingress Controller'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'upgrade'
-              chartType: 'Name'
-              chartName: 'ingress-nginx/ingress-nginx'
-              releaseName: 'nginx-ingress'
-              installIfNotExist: true
-
-          - task: HelmDeploy@0
+          # Instalar cert-manager
+          - script: |
+              helm repo add jetstack https://charts.jetstack.io
+              helm repo update
+              kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
+              helm upgrade --install cert-manager jetstack/cert-manager \
+                --namespace cert-manager \
+                --version v1.13.0 \
+                --set installCRDs=true
+              # Esperar a que cert-manager esté listo
+              kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
             displayName: 'Install cert-manager'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'cert-manager'
-              command: 'repo'
-              arguments: 'add jetstack https://charts.jetstack.io'
 
-          - task: HelmDeploy@0
-            displayName: 'Deploy cert-manager'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'cert-manager'
-              command: 'upgrade'
-              chartType: 'Name'
-              chartName: 'jetstack/cert-manager'
-              releaseName: 'cert-manager'
-              installIfNotExist: true
-              arguments: '--create-namespace --set installCRDs=true'
-
+          # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1
-            displayName: 'Apply Cert Issuer'
+            displayName: Deploy Redis and Main App
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
               command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml'
+              arguments: '-f $(System.DefaultWorkingDirectory)/manifests/redis-deployment.yml -f $(System.DefaultWorkingDirectory)/manifests/redis-service.yml -f $(System.DefaultWorkingDirectory)/manifests/deployment.yml -f $(System.DefaultWorkingDirectory)/manifests/service.yml'
+
+          # Obtener IP y actualizar ingress
+          - script: |
+              # Esperar a que el ingress controller tenga IP
+              echo "Waiting for ingress controller to get IP..."
+              while [ -z "$INGRESS_IP" ]; do
+                INGRESS_IP=$(kubectl get service ingress-nginx-controller -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || true)
+                if [ -z "$INGRESS_IP" ]; then
+                  echo "Waiting for IP..."
+                  sleep 10
+                fi
+              done
+              echo "Ingress IP: $INGRESS_IP"
+
+              # Actualizar los archivos de ingress y cert-issuer
+              sed -i "s/YOUR_IP/$INGRESS_IP/g" $(System.DefaultWorkingDirectory)/manifests/ingress.yml
+              
+              # Aplicar cert-issuer y ingress
+              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml
+              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/ingress.yml
+            displayName: 'Configure Ingress and TLS'
+
+          - script: |
+              echo "Deployment Status:"
+              kubectl get pods -n default
+              kubectl get services -n default
+              kubectl get ingress -n default
+              echo "Access your application at: https://devops-app.$INGRESS_IP.nip.io"
+            displayName: 'Show Deployment Info'
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -217,106 +182,71 @@ stages:
         deploy:
           steps:
           - checkout: self
-          
-          - task: Kubernetes@1
-            displayName: Delete existing secret
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              namespace: 'default'
-              command: 'delete'
-              arguments: 'secret $(IMAGE_PULL_SECRET_NAME) --ignore-not-found'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
-          - task: Kubernetes@1
-            displayName: Create new secret
+          # Instalar Helm y herramientas necesarias
+          - task: HelmInstaller@1
             inputs:
-              connectionType: 'Kubernetes Service Connection'
-              namespace: 'default'
-              command: 'create'
-              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD)'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
+              helmVersionToInstall: 'latest'
 
-          - task: Kubernetes@1
-            displayName: Deploy to AKS
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              namespace: 'default'
-              command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests'
-              secretType: 'dockerRegistry'
-              containerRegistryType: 'Azure Container Registry'
-              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-
-          - task: Bash@3
-            displayName: 'Debug Kubernetes Deployment'
-            inputs:
-              targetType: 'inline'
-              script: |
-                kubectl get pods -n default
-                kubectl get services -n default
-                kubectl get deployments -n default
-                kubectl describe deployment microservice-deployment -n default
-                kubectl get events --sort-by='.metadata.creationTimestamp' -n default
-                
-          - task: HelmDeploy@0
+          # Instalar NGINX Ingress Controller
+          - script: |
+              helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+              helm repo update
+              helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+                --namespace default \
+                --set controller.replicaCount=2 \
+                --set controller.nodeSelector."kubernetes\.io/os"=linux \
+                --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
             displayName: 'Install NGINX Ingress Controller'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'repo'
-              arguments: 'add ingress-nginx https://kubernetes.github.io/ingress-nginx'
 
-          - task: HelmDeploy@0
-            displayName: 'Update Helm repos'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'repo'
-              arguments: 'update'
-
-          - task: HelmDeploy@0
-            displayName: 'Deploy NGINX Ingress Controller'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'default'
-              command: 'upgrade'
-              chartType: 'Name'
-              chartName: 'ingress-nginx/ingress-nginx'
-              releaseName: 'nginx-ingress'
-              installIfNotExist: true
-
-          - task: HelmDeploy@0
+          # Instalar cert-manager
+          - script: |
+              helm repo add jetstack https://charts.jetstack.io
+              helm repo update
+              kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
+              helm upgrade --install cert-manager jetstack/cert-manager \
+                --namespace cert-manager \
+                --version v1.13.0 \
+                --set installCRDs=true
+              # Esperar a que cert-manager esté listo
+              kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
             displayName: 'Install cert-manager'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'cert-manager'
-              command: 'repo'
-              arguments: 'add jetstack https://charts.jetstack.io'
 
-          - task: HelmDeploy@0
-            displayName: 'Deploy cert-manager'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
-              namespace: 'cert-manager'
-              command: 'upgrade'
-              chartType: 'Name'
-              chartName: 'jetstack/cert-manager'
-              releaseName: 'cert-manager'
-              installIfNotExist: true
-              arguments: '--create-namespace --set installCRDs=true'
-
+          # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1
-            displayName: 'Apply Cert Issuer'
+            displayName: Deploy Redis and Main App
             inputs:
               connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
               command: 'apply'
-              useConfigurationFile: true
-              configuration: '$(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml'
+              arguments: '-f $(System.DefaultWorkingDirectory)/manifests/redis-deployment.yml -f $(System.DefaultWorkingDirectory)/manifests/redis-service.yml -f $(System.DefaultWorkingDirectory)/manifests/deployment.yml -f $(System.DefaultWorkingDirectory)/manifests/service.yml'
+
+          # Obtener IP y actualizar ingress
+          - script: |
+              # Esperar a que el ingress controller tenga IP
+              echo "Waiting for ingress controller to get IP..."
+              while [ -z "$INGRESS_IP" ]; do
+                INGRESS_IP=$(kubectl get service ingress-nginx-controller -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || true)
+                if [ -z "$INGRESS_IP" ]; then
+                  echo "Waiting for IP..."
+                  sleep 10
+                fi
+              done
+              echo "Ingress IP: $INGRESS_IP"
+
+              # Actualizar los archivos de ingress y cert-issuer
+              sed -i "s/YOUR_IP/$INGRESS_IP/g" $(System.DefaultWorkingDirectory)/manifests/ingress.yml
+              
+              # Aplicar cert-issuer y ingress
+              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml
+              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/ingress.yml
+            displayName: 'Configure Ingress and TLS'
+
+          - script: |
+              echo "Deployment Status:"
+              kubectl get pods -n default
+              kubectl get services -n default
+              kubectl get ingress -n default
+              echo "Access your application at: https://devops-app.$INGRESS_IP.nip.io"
+            displayName: 'Show Deployment Info'
