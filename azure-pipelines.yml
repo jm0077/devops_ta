@@ -97,7 +97,7 @@ stages:
               arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
           
-          - task: replacetokens@3
+          - task: replacetokens@5
             inputs:
               targetFiles: |
                 $(System.DefaultWorkingDirectory)/manifests/deployment.yml
@@ -106,6 +106,11 @@ stages:
               tokenPattern: 'default'
               writeBOM: true
               actionOnMissing: 'warn'
+              keepToken: false
+              actionOnNoFiles: 'continue'
+              enableTransforms: false
+              useLegacyPattern: false
+              enableTelemetry: true
               
           - task: Kubernetes@1
             displayName: Deploy to AKS
@@ -146,7 +151,7 @@ stages:
               arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
           
-          - task: replacetokens@3
+          - task: replacetokens@5
             inputs:
               targetFiles: |
                 $(System.DefaultWorkingDirectory)/manifests/deployment.yml
@@ -155,6 +160,11 @@ stages:
               tokenPattern: 'default'
               writeBOM: true
               actionOnMissing: 'warn'
+              keepToken: false
+              actionOnNoFiles: 'continue'
+              enableTransforms: false
+              useLegacyPattern: false
+              enableTelemetry: true
               
           - task: Kubernetes@1
             displayName: Deploy to AKS
