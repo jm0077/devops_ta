@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: microservice-deployment
+  namespace: default
 spec:
   replicas: 2
   selector:
@@ -14,8 +15,9 @@ spec:
     spec:
       containers:
       - name: microservice
-        image: #{ACR_LOGIN_SERVER}#/#{IMAGE_REPOSITORY_NAME}#:#{Build.BuildId}#
-       ports:
+        image: acrdevopsta.azurecr.io/devops-ta-app:latest
+        imagePullPolicy: Always
+        ports:
         - containerPort: 5000
         resources:
           requests:
@@ -27,7 +29,21 @@ spec:
         env:
         - name: PYTHONUNBUFFERED
           value: "1"
+        - name: PYTHONDONTWRITEBYTECODE
+          value: "1"
         - name: LOG_LEVEL
           value: "DEBUG"
+        readinessProbe:
+          httpGet:
+            path: /DevOps
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /DevOps
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 20
       imagePullSecrets:
-      - name: #{IMAGE_PULL_SECRET_NAME}#
+      - name: acr-auth-secret

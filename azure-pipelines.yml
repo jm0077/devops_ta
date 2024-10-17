@@ -62,6 +62,12 @@ stages:
         pollingTimeoutSec: '300'
 
     - task: Docker@2
+      displayName: Login to ACR
+      inputs:
+        command: login
+        containerRegistry: $(ACR_SERVICE_CONNECTION)
+
+    - task: Docker@2
       displayName: Build and push Docker image
       inputs:
         command: buildAndPush
@@ -93,49 +99,29 @@ stages:
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
-              command: 'create'
-              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
+              command: 'delete'
+              arguments: 'secret $(IMAGE_PULL_SECRET_NAME) --ignore-not-found'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-          
-          - task: replacetokens@5
+
+          - task: Kubernetes@1
+            displayName: Create/Update ImagePullSecret
             inputs:
-              targetFiles: |
-                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
-                $(System.DefaultWorkingDirectory)/manifests/service.yml
-              encoding: 'auto'
-              tokenPattern: 'default'
-              writeBOM: true
-              actionOnMissing: 'warn'
-              keepToken: false
-              actionOnNoFiles: 'continue'
-              enableTransforms: false
-              useLegacyPattern: false
-              enableTelemetry: true
-              
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                echo "Contenido de deployment.yml:"
-                cat $(System.DefaultWorkingDirectory)/manifests/deployment.yml
-                echo "Contenido de service.yml:"
-                cat $(System.DefaultWorkingDirectory)/manifests/service.yml
-                echo "Listado de archivos en el directorio de manifiestos:"
-                ls -l $(System.DefaultWorkingDirectory)/manifests/
-            displayName: 'Mostrar contenido de los manifiestos'
+              connectionType: 'Kubernetes Service Connection'
+              namespace: 'default'
+              command: 'create'
+              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD)'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
           - task: Kubernetes@1
             displayName: Deploy to AKS
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
-              manifests: |
-                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
-                $(System.DefaultWorkingDirectory)/manifests/service.yml
-              imagePullSecrets: |
-                $(IMAGE_PULL_SECRET_NAME)
-              containers: |
-                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+              command: 'apply'
+              useConfigurationFile: true
+              configuration: '$(System.DefaultWorkingDirectory)/manifests'
+              secretType: 'dockerRegistry'
+              containerRegistryType: 'Azure Container Registry'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
           - task: Bash@3
@@ -143,11 +129,11 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                kubectl get pods
-                kubectl get services
-                kubectl get deployments
-                kubectl describe deployment microservice-deployment
-                kubectl get events --sort-by='.metadata.creationTimestamp'
+                kubectl get pods -n default
+                kubectl get services -n default
+                kubectl get deployments -n default
+                kubectl describe deployment microservice-deployment -n default
+                kubectl get events --sort-by='.metadata.creationTimestamp' -n default
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -170,49 +156,29 @@ stages:
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
-              command: 'create'
-              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
+              command: 'delete'
+              arguments: 'secret $(IMAGE_PULL_SECRET_NAME) --ignore-not-found'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-          
-          - task: replacetokens@5
+
+          - task: Kubernetes@1
+            displayName: Create/Update ImagePullSecret
             inputs:
-              targetFiles: |
-                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
-                $(System.DefaultWorkingDirectory)/manifests/service.yml
-              encoding: 'auto'
-              tokenPattern: 'default'
-              writeBOM: true
-              actionOnMissing: 'warn'
-              keepToken: false
-              actionOnNoFiles: 'continue'
-              enableTransforms: false
-              useLegacyPattern: false
-              enableTelemetry: true
-              
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                echo "Contenido de deployment.yml:"
-                cat $(System.DefaultWorkingDirectory)/manifests/deployment.yml
-                echo "Contenido de service.yml:"
-                cat $(System.DefaultWorkingDirectory)/manifests/service.yml
-                echo "Listado de archivos en el directorio de manifiestos:"
-                ls -l $(System.DefaultWorkingDirectory)/manifests/
-            displayName: 'Mostrar contenido de los manifiestos'
+              connectionType: 'Kubernetes Service Connection'
+              namespace: 'default'
+              command: 'create'
+              arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD)'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
           - task: Kubernetes@1
             displayName: Deploy to AKS
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
-              manifests: |
-                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
-                $(System.DefaultWorkingDirectory)/manifests/service.yml
-              imagePullSecrets: |
-                $(IMAGE_PULL_SECRET_NAME)
-              containers: |
-                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+              command: 'apply'
+              useConfigurationFile: true
+              configuration: '$(System.DefaultWorkingDirectory)/manifests'
+              secretType: 'dockerRegistry'
+              containerRegistryType: 'Azure Container Registry'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
           - task: Bash@3
@@ -220,8 +186,8 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                kubectl get pods
-                kubectl get services
-                kubectl get deployments
-                kubectl describe deployment microservice-deployment
-                kubectl get events --sort-by='.metadata.creationTimestamp'
+                kubectl get pods -n default
+                kubectl get services -n default
+                kubectl get deployments -n default
+                kubectl describe deployment microservice-deployment -n default
+                kubectl get events --sort-by='.metadata.creationTimestamp' -n default
