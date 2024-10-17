@@ -2,17 +2,18 @@ import unittest
 import json
 import sys
 import os
+import jwt
 
 # Añadir el directorio src al path de Python
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from app import app
+from app import app, JWT_SECRET
 
 class TestDevOpsEndpoint(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         self.api_key = "2f5ae96c-b558-4c7b-a590-a501ae1c3f6c"
-        self.jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzb21lIjoicGF5bG9hZCJ9.Joh1R2dYzkRvDkqv3sygm5YyK8Gi4ShZqbhK2gxcs2U"
+        self.jwt = jwt.encode({"some": "payload"}, JWT_SECRET, algorithm="HS256")
 
     def test_valid_request(self):
         headers = {

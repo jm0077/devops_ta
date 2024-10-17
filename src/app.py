@@ -5,7 +5,7 @@ import jwt
 app = Flask(__name__)
 
 API_KEY = "2f5ae96c-b558-4c7b-a590-a501ae1c3f6c"
-JWT_SECRET = "your_jwt_secret_here"  # Cambia esto por una clave secreta segura
+JWT_SECRET = "your_jwt_secret_here"
 
 def require_apikey(view_function):
     @wraps(view_function)
@@ -20,7 +20,9 @@ def verify_jwt(token):
     try:
         jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         return True
-    except:
+    except jwt.ExpiredSignatureError:
+        return False
+    except jwt.InvalidTokenError:
         return False
 
 @app.route('/DevOps', methods=['POST'])
