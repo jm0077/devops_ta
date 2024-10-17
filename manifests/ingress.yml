@@ -7,26 +7,18 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "nginx"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"  # Importante: permitir HTTP para la validación
+    acme.cert-manager.io/http01-edit-in-place: "true"
 spec:
   tls:
   - hosts:
-    - devops-app.YOUR_IP.nip.io
+    - devops-app.51.8.242.226.nip.io
     secretName: devops-app-tls
   rules:
-  - host: devops-app.YOUR_IP.nip.io
+  - host: devops-app.51.8.242.226.nip.io
     http:
       paths:
-      - path: /.well-known/acme-challenge/(.*)
-        pathType: Prefix
-        backend:
-          service:
-            name: microservice-service
-            port:
-              number: 5000
-      - path: /(.*)
+      - path: /
         pathType: Prefix
         backend:
           service:

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from functools import wraps
 import jwt
 import redis
@@ -46,6 +46,10 @@ def verify_jwt(token):
     except Exception as e:
         return False, str(e)
 
+@app.route('/.well-known/acme-challenge/<path:path>', methods=['GET'])
+def acme_challenge(path):
+    return '', 404  # Permite que cert-manager maneje esta ruta
+
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy"}), 200
@@ -73,9 +77,8 @@ def devops():
 
 @app.route('/<path:path>', methods=['GET', 'PUT', 'DELETE', 'PATCH'])
 def catch_all(path):
-    # Permite las peticiones GET para la validación de Let's Encrypt
-    if request.method == 'GET' and path.startswith('.well-known/acme-challenge/'):
-        return '', 404  # Deja que cert-manager maneje esta ruta
+    if path.startswith('.well-known/acme-challenge/'):
+        return '', 404
     return "ERROR", 400
 
 if __name__ == '__main__':
