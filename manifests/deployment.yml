@@ -33,6 +33,12 @@ spec:
           value: "1"
         - name: LOG_LEVEL
           value: "DEBUG"
+        startupProbe:
+          httpGet:
+            path: /DevOps
+            port: 5000
+          failureThreshold: 30
+          periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /DevOps

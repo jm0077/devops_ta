@@ -61,22 +61,26 @@ stages:
       inputs:
         pollingTimeoutSec: '300'
 
+    # Instalar buildx
+    - script: |
+        docker buildx create --use
+      displayName: 'Set up Docker Buildx'
+
+    # Login to Azure Container Registry
     - task: Docker@2
       displayName: Login to ACR
       inputs:
         command: login
         containerRegistry: $(ACR_SERVICE_CONNECTION)
 
-    - task: Docker@2
-      displayName: Build and push Docker image
-      inputs:
-        command: buildAndPush
-        repository: $(IMAGE_REPOSITORY_NAME)
-        containerRegistry: $(ACR_SERVICE_CONNECTION)
-        dockerfile: $(Build.SourcesDirectory)/Dockerfile
-        tags: |
-          $(Build.BuildId)
-          latest
+    # Build and push usando buildx
+    - script: |
+        docker buildx build --platform linux/amd64 \
+          -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId) \
+          -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):latest \
+          --push \
+          .
+      displayName: 'Build and push Docker image'
 
 - stage: DeployToDev
   displayName: Deploy to Dev
@@ -95,7 +99,7 @@ stages:
           - checkout: self
           
           - task: Kubernetes@1
-            displayName: Create/Update ImagePullSecret
+            displayName: Delete existing secret
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
@@ -104,7 +108,7 @@ stages:
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
           - task: Kubernetes@1
-            displayName: Create/Update ImagePullSecret
+            displayName: Create new secret
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
@@ -152,7 +156,7 @@ stages:
           - checkout: self
           
           - task: Kubernetes@1
-            displayName: Create/Update ImagePullSecret
+            displayName: Delete existing secret
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
@@ -161,7 +165,7 @@ stages:
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
           - task: Kubernetes@1
-            displayName: Create/Update ImagePullSecret
+            displayName: Create new secret
             inputs:
               connectionType: 'Kubernetes Service Connection'
               namespace: 'default'
