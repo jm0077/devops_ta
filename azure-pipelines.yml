@@ -61,35 +61,27 @@ stages:
       inputs:
         pollingTimeoutSec: '300'
 
-    # Configurar buildx con el driver correcto
+    # Build and push usando buildx
     - script: |
+        # Configurar buildx
         docker buildx create --name mybuilder --driver docker-container --bootstrap
         docker buildx use mybuilder
-        docker buildx inspect --bootstrap
-      displayName: 'Set up Docker Buildx'
-
-    # Login to Azure Container Registry
-    - task: Docker@2
-      displayName: Login to ACR
-      inputs:
-        command: login
-        containerRegistry: $(ACR_SERVICE_CONNECTION)
-
-    # Build y push usando buildx con el nuevo driver
-    - script: |
+        
+        # Login to ACR usando las variables de Azure
+        echo $(ACR_ADMIN_PASSWORD) | docker login $(ACR_LOGIN_SERVER) -u $(ACR_ADMIN_USERNAME) --password-stdin
+        
+        # Build y push de la imagen multi-arquitectura
         docker buildx build --platform linux/amd64,linux/arm64 \
           --builder mybuilder \
           -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId) \
           -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):latest \
           --push \
           .
-      displayName: 'Build and push Docker image'
-
-    # Limpiar el builder después de usarlo
-    - script: |
+        
+        # Limpiar
         docker buildx rm mybuilder
-      condition: always()
-      displayName: 'Clean up Docker Buildx'
+        docker logout $(ACR_LOGIN_SERVER)
+      displayName: 'Build and push multi-arch Docker image'
 
 - stage: DeployToDev
   displayName: Deploy to Dev
