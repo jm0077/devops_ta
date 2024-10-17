@@ -1,22 +1,23 @@
-FROM --platform=$BUILDPLATFORM python:3.9-slim
+# Dockerfile
+FROM --platform=linux/amd64 python:3.9-slim-bullseye
 
-# Establecer el directorio de trabajo
 WORKDIR /app
 
-# Copiar los requerimientos e instalar dependencias
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apt-get remove -y gcc python3-dev && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copiar el código fuente
 COPY src/ .
 
-# Configurar variables de entorno
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     LOG_LEVEL=DEBUG
 
-# Exponer el puerto
 EXPOSE 5000
 
-# Comando para ejecutar la aplicación
-CMD ["python", "./app.py"]
+CMD ["python3", "./app.py"]
