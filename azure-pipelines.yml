@@ -138,6 +138,17 @@ stages:
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
+          - task: Bash@3
+            displayName: 'Debug Kubernetes Deployment'
+            inputs:
+              targetType: 'inline'
+              script: |
+                kubectl get pods
+                kubectl get services
+                kubectl get deployments
+                kubectl describe deployment microservice-deployment
+                kubectl get events --sort-by='.metadata.creationTimestamp'
+
 - stage: DeployToProd
   displayName: Deploy to Prod
   dependsOn: Build
@@ -203,3 +214,14 @@ stages:
               containers: |
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
+
+          - task: Bash@3
+            displayName: 'Debug Kubernetes Deployment'
+            inputs:
+              targetType: 'inline'
+              script: |
+                kubectl get pods
+                kubectl get services
+                kubectl get deployments
+                kubectl describe deployment microservice-deployment
+                kubectl get events --sort-by='.metadata.creationTimestamp'
