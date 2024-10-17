@@ -75,7 +75,7 @@ stages:
 
     # Build and push usando buildx
     - script: |
-        docker buildx build --platform linux/amd64 \
+        docker buildx build --platform linux/amd64,linux/arm64 \
           -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId) \
           -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):latest \
           --push \

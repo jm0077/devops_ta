@@ -1,5 +1,5 @@
 # Dockerfile
-FROM --platform=linux/amd64 python:3.9-slim-bullseye
+FROM python:3.9-slim-bullseye
 
 WORKDIR /app
 
