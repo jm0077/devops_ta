@@ -99,7 +99,12 @@ stages:
           steps:
           - checkout: self
 
-          # Instalar Helm y herramientas necesarias
+          # Instalar dependencias necesarias
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y unzip curl apt-transport-https
+            displayName: 'Install Prerequisites'
+
           - task: HelmInstaller@1
             inputs:
               helmVersionToInstall: 'latest'
@@ -181,9 +186,14 @@ stages:
       runOnce:
         deploy:
           steps:
-          - checkout: self
+         - checkout: self
 
-          # Instalar Helm y herramientas necesarias
+          # Instalar dependencias necesarias
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y unzip curl apt-transport-https
+            displayName: 'Install Prerequisites'
+
           - task: HelmInstaller@1
             inputs:
               helmVersionToInstall: 'latest'
