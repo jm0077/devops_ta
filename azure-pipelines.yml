@@ -120,6 +120,8 @@ stages:
                 cat $(System.DefaultWorkingDirectory)/manifests/deployment.yml
                 echo "Contenido de service.yml:"
                 cat $(System.DefaultWorkingDirectory)/manifests/service.yml
+                echo "Listado de archivos en el directorio de manifiestos:"
+                ls -l $(System.DefaultWorkingDirectory)/manifests/
             displayName: 'Mostrar contenido de los manifiestos'
 
           - task: Kubernetes@1
@@ -135,8 +137,6 @@ stages:
               containers: |
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-              command: 'apply'
-              arguments: '--v=9'
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -186,6 +186,8 @@ stages:
                 cat $(System.DefaultWorkingDirectory)/manifests/deployment.yml
                 echo "Contenido de service.yml:"
                 cat $(System.DefaultWorkingDirectory)/manifests/service.yml
+                echo "Listado de archivos en el directorio de manifiestos:"
+                ls -l $(System.DefaultWorkingDirectory)/manifests/
             displayName: 'Mostrar contenido de los manifiestos'
 
           - task: Kubernetes@1
@@ -201,5 +203,3 @@ stages:
               containers: |
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
-              command: 'apply'
-              arguments: '--v=9'
