@@ -61,9 +61,11 @@ stages:
       inputs:
         pollingTimeoutSec: '300'
 
-    # Instalar buildx
+    # Configurar buildx con el driver correcto
     - script: |
-        docker buildx create --use
+        docker buildx create --name mybuilder --driver docker-container --bootstrap
+        docker buildx use mybuilder
+        docker buildx inspect --bootstrap
       displayName: 'Set up Docker Buildx'
 
     # Login to Azure Container Registry
@@ -73,14 +75,21 @@ stages:
         command: login
         containerRegistry: $(ACR_SERVICE_CONNECTION)
 
-    # Build and push usando buildx
+    # Build y push usando buildx con el nuevo driver
     - script: |
         docker buildx build --platform linux/amd64,linux/arm64 \
+          --builder mybuilder \
           -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId) \
           -t $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):latest \
           --push \
           .
       displayName: 'Build and push Docker image'
+
+    # Limpiar el builder después de usarlo
+    - script: |
+        docker buildx rm mybuilder
+      condition: always()
+      displayName: 'Clean up Docker Buildx'
 
 - stage: DeployToDev
   displayName: Deploy to Dev
