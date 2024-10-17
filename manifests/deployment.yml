@@ -14,6 +14,8 @@ spec:
     spec:
       containers:
       - name: microservice
-        image: $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+        image: acrdevopsta.azurecr.io/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
         ports:
         - containerPort: 5000
+      imagePullSecrets:
+      - name: $(IMAGE_PULL_SECRET_NAME)
