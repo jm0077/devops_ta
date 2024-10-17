@@ -61,6 +61,18 @@ stages:
       inputs:
         pollingTimeoutSec: '300'
 
+    # Docker build and push task actualizado con los nombres correctos
+    - task: Docker@2
+      displayName: Build and push Docker image
+      inputs:
+        command: buildAndPush
+        repository: $(IMAGE_REPOSITORY_NAME)
+        containerRegistry: $(ACR_SERVICE_CONNECTION)
+        dockerfile: $(Build.SourcesDirectory)/Dockerfile
+        tags: |
+          $(Build.BuildId)
+          latest
+
 - stage: DeployToDev
   displayName: Deploy to Dev
   dependsOn: Build
@@ -75,17 +87,20 @@ stages:
       runOnce:
         deploy:
           steps:
+          - checkout: self
+          
           - task: Kubernetes@1
             inputs:
               connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
               manifests: |
-                $(Pipeline.Workspace)/manifests/deployment.yml
-                $(Pipeline.Workspace)/manifests/service.yml
+                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
+                $(System.DefaultWorkingDirectory)/manifests/service.yml
               imagePullSecrets: |
                 $(IMAGE_PULL_SECRET_NAME)
               containers: |
-                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+                $(acrdevopsta.azurecr.io)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -101,14 +116,17 @@ stages:
       runOnce:
         deploy:
           steps:
+          - checkout: self
+          
           - task: Kubernetes@1
             inputs:
               connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
               manifests: |
-                $(Pipeline.Workspace)/manifests/deployment.yml
-                $(Pipeline.Workspace)/manifests/service.yml
+                $(System.DefaultWorkingDirectory)/manifests/deployment.yml
+                $(System.DefaultWorkingDirectory)/manifests/service.yml
               imagePullSecrets: |
                 $(IMAGE_PULL_SECRET_NAME)
               containers: |
-                $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
+                $(acrdevopsta.azurecr.io)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
