@@ -112,6 +112,16 @@ stages:
               useLegacyPattern: false
               enableTelemetry: true
               
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Contenido de deployment.yml:"
+                cat $(System.DefaultWorkingDirectory)/manifests/deployment.yml
+                echo "Contenido de service.yml:"
+                cat $(System.DefaultWorkingDirectory)/manifests/service.yml
+            displayName: 'Mostrar contenido de los manifiestos'
+
           - task: Kubernetes@1
             displayName: Deploy to AKS
             inputs:
@@ -125,6 +135,8 @@ stages:
               containers: |
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
+              command: 'apply'
+              arguments: '--v=9'
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -166,6 +178,16 @@ stages:
               useLegacyPattern: false
               enableTelemetry: true
               
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Contenido de deployment.yml:"
+                cat $(System.DefaultWorkingDirectory)/manifests/deployment.yml
+                echo "Contenido de service.yml:"
+                cat $(System.DefaultWorkingDirectory)/manifests/service.yml
+            displayName: 'Mostrar contenido de los manifiestos'
+
           - task: Kubernetes@1
             displayName: Deploy to AKS
             inputs:
@@ -179,3 +201,5 @@ stages:
               containers: |
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
+              command: 'apply'
+              arguments: '--v=9'
