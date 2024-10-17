@@ -1,11 +1,19 @@
 from flask import Flask, request, jsonify
 from functools import wraps
 import jwt
+import redis
+import os
 
 app = Flask(__name__)
 
+# Configuración
 API_KEY = "2f5ae96c-b558-4c7b-a590-a501ae1c3f6c"
 JWT_SECRET = "your_jwt_secret_here"
+
+# Configuración Redis para tracking de JWT
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis-service')
+REDIS_PORT = os.getenv('REDIS_PORT', 6379)
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
 def require_apikey(view_function):
     @wraps(view_function)
@@ -18,12 +26,25 @@ def require_apikey(view_function):
 
 def verify_jwt(token):
     try:
-        jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        return True
+        # Verificar si el token ya fue usado
+        if redis_client.get(f"used_token:{token}"):
+            return False, "Token already used"
+        
+        # Decodificar y verificar el token
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        
+        # Marcar el token como usado
+        redis_client.setex(f"used_token:{token}", 
+                         int(payload.get('timeToLifeSec', 3600)), 
+                         'used')
+        
+        return True, None
     except jwt.ExpiredSignatureError:
-        return False
+        return False, "Token expired"
     except jwt.InvalidTokenError:
-        return False
+        return False, "Invalid token"
+    except Exception as e:
+        return False, str(e)
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -33,8 +54,13 @@ def health_check():
 @require_apikey
 def devops():
     jwt_token = request.headers.get('X-JWT-KWY')
-    if not jwt_token or not verify_jwt(jwt_token):
-        return jsonify({"error": "Invalid JWT"}), 401
+    if not jwt_token:
+        return jsonify({"error": "Missing JWT"}), 401
+
+    # Verificar JWT y su uso único
+    is_valid, error_message = verify_jwt(jwt_token)
+    if not is_valid:
+        return jsonify({"error": f"Invalid JWT: {error_message}"}), 401
 
     data = request.json
     if not all(key in data for key in ["message", "to", "from", "timeToLifeSec"]):

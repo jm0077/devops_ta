@@ -139,6 +139,68 @@ stages:
                 kubectl get deployments -n default
                 kubectl describe deployment microservice-deployment -n default
                 kubectl get events --sort-by='.metadata.creationTimestamp' -n default
+                
+          - task: HelmDeploy@0
+            displayName: 'Install NGINX Ingress Controller'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'repo'
+              arguments: 'add ingress-nginx https://kubernetes.github.io/ingress-nginx'
+
+          - task: HelmDeploy@0
+            displayName: 'Update Helm repos'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'repo'
+              arguments: 'update'
+
+          - task: HelmDeploy@0
+            displayName: 'Deploy NGINX Ingress Controller'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'upgrade'
+              chartType: 'Name'
+              chartName: 'ingress-nginx/ingress-nginx'
+              releaseName: 'nginx-ingress'
+              installIfNotExist: true
+
+          - task: HelmDeploy@0
+            displayName: 'Install cert-manager'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'cert-manager'
+              command: 'repo'
+              arguments: 'add jetstack https://charts.jetstack.io'
+
+          - task: HelmDeploy@0
+            displayName: 'Deploy cert-manager'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'cert-manager'
+              command: 'upgrade'
+              chartType: 'Name'
+              chartName: 'jetstack/cert-manager'
+              releaseName: 'cert-manager'
+              installIfNotExist: true
+              arguments: '--create-namespace --set installCRDs=true'
+
+          - task: Kubernetes@1
+            displayName: 'Apply Cert Issuer'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'apply'
+              useConfigurationFile: true
+              configuration: '$(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml'
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -196,3 +258,65 @@ stages:
                 kubectl get deployments -n default
                 kubectl describe deployment microservice-deployment -n default
                 kubectl get events --sort-by='.metadata.creationTimestamp' -n default
+                
+          - task: HelmDeploy@0
+            displayName: 'Install NGINX Ingress Controller'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'repo'
+              arguments: 'add ingress-nginx https://kubernetes.github.io/ingress-nginx'
+
+          - task: HelmDeploy@0
+            displayName: 'Update Helm repos'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'repo'
+              arguments: 'update'
+
+          - task: HelmDeploy@0
+            displayName: 'Deploy NGINX Ingress Controller'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'upgrade'
+              chartType: 'Name'
+              chartName: 'ingress-nginx/ingress-nginx'
+              releaseName: 'nginx-ingress'
+              installIfNotExist: true
+
+          - task: HelmDeploy@0
+            displayName: 'Install cert-manager'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'cert-manager'
+              command: 'repo'
+              arguments: 'add jetstack https://charts.jetstack.io'
+
+          - task: HelmDeploy@0
+            displayName: 'Deploy cert-manager'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'cert-manager'
+              command: 'upgrade'
+              chartType: 'Name'
+              chartName: 'jetstack/cert-manager'
+              releaseName: 'cert-manager'
+              installIfNotExist: true
+              arguments: '--create-namespace --set installCRDs=true'
+
+          - task: Kubernetes@1
+            displayName: 'Apply Cert Issuer'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'apply'
+              useConfigurationFile: true
+              configuration: '$(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml'

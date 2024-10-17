@@ -33,6 +33,10 @@ spec:
           value: "1"
         - name: LOG_LEVEL
           value: "DEBUG"
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
         startupProbe:
           httpGet:
             path: /health
@@ -51,5 +55,9 @@ spec:
             port: 5000
           initialDelaySeconds: 15
           periodSeconds: 20
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
       imagePullSecrets:
       - name: acr-auth-secret
