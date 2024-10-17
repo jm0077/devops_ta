@@ -95,7 +95,7 @@ stages:
               namespace: 'default'
               command: 'create'
               arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
           
           - task: replacetokens@3
             inputs:
@@ -119,7 +119,7 @@ stages:
                 $(IMAGE_PULL_SECRET_NAME)
               containers: |
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
 
 - stage: DeployToProd
   displayName: Deploy to Prod
@@ -144,7 +144,7 @@ stages:
               namespace: 'default'
               command: 'create'
               arguments: 'secret docker-registry $(IMAGE_PULL_SECRET_NAME) --docker-server=$(ACR_LOGIN_SERVER) --docker-username=$(ACR_ADMIN_USERNAME) --docker-password=$(ACR_ADMIN_PASSWORD) --dry-run -o yaml'
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
           
           - task: replacetokens@3
             inputs:
@@ -168,4 +168,4 @@ stages:
                 $(IMAGE_PULL_SECRET_NAME)
               containers: |
                 $(ACR_LOGIN_SERVER)/$(IMAGE_REPOSITORY_NAME):$(Build.BuildId)
-              kubernetesServiceConnection: 'devops-ta-aks-connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
