@@ -25,6 +25,10 @@ def verify_jwt(token):
     except jwt.InvalidTokenError:
         return False
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy"}), 200
+
 @app.route('/DevOps', methods=['POST'])
 @require_apikey
 def devops():
