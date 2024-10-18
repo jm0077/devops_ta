@@ -48,8 +48,8 @@ def verify_jwt(token):
 
 @app.route('/.well-known/acme-challenge/<token>', methods=['GET'])
 def acme_challenge(token):
-    # El token es el path parameter que llega en la URL
-    return f"{token}", 200
+    # Asegurar que devolvemos exactamente el contenido del token sin modificaciones
+    return token, 200, {'Content-Type': 'text/plain'}
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -76,11 +76,13 @@ def devops():
     }
     return jsonify(response)
 
+# Modificamos el catch-all para que no interfiera con acme-challenge
+@app.route('/', defaults={'path': ''}, methods=['GET'])
 @app.route('/<path:path>', methods=['GET', 'PUT', 'DELETE', 'PATCH'])
 def catch_all(path):
     if path.startswith('.well-known/acme-challenge/'):
         return '', 404
-    return "ERROR", 400
+    return "ERROR", 405
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
