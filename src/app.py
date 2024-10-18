@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 # Configuración
 API_KEY = "2f5ae96c-b558-4c7b-a590-a501ae1c3f6c"
-JWT_SECRET = "your_jwt_secret_here"
+JWT_SECRET = os.getenv('JWT_SECRET')
 
 # Configuración Redis para tracking de JWT
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis-service')

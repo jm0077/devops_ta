@@ -6,17 +6,28 @@ metadata:
   namespace: default
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "8m"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
 spec:
+  tls:
+  - hosts:
+    - devops-ta.duckdns.org
+    secretName: devops-ta-tls
   rules:
   - host: devops-ta.duckdns.org
     http:
       paths:
+      - path: /.well-known/pki-validation/
+        pathType: Prefix
+        backend:
+          service:
+            name: microservice-service
+            port:
+              number: 80
       - path: /
         pathType: Prefix
         backend:
@@ -24,4 +35,3 @@ spec:
             name: microservice-service
             port:
               number: 80
-  tls: []

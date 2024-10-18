@@ -120,6 +120,15 @@ stages:
                 --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
             displayName: 'Install NGINX Ingress Controller'
 
+          - task: Kubernetes@1
+            displayName: Create JWT Secret
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'create'
+              arguments: 'secret generic jwt-secret --from-literal=JWT_SECRET=$(JWT_SECRET) --dry-run=client -o yaml | kubectl apply -f -'
+
           # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1
             displayName: Deploy Redis and Main App
@@ -195,6 +204,15 @@ stages:
                 --set controller.nodeSelector."kubernetes\.io/os"=linux \
                 --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
             displayName: 'Install NGINX Ingress Controller'
+
+          - task: Kubernetes@1
+            displayName: Create JWT Secret
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'devops-ta-aks-connection'
+              namespace: 'default'
+              command: 'create'
+              arguments: 'secret generic jwt-secret --from-literal=JWT_SECRET=$(JWT_SECRET) --dry-run=client -o yaml | kubectl apply -f -'
 
           # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1

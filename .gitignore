@@ -63,3 +63,9 @@ htmlcov/
 
 # Archivos de Docker
 .docker/
+
+# Excluir archivo de validación PKI
+manifests/validation-configmap.yml
+# Excluir cualquier archivo de validación PKI
+**/*.pki-validation
+**/*pki-validation*
