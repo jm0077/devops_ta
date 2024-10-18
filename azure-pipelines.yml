@@ -120,19 +120,6 @@ stages:
                 --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
             displayName: 'Install NGINX Ingress Controller'
 
-          # Instalar cert-manager
-          - script: |
-              helm repo add jetstack https://charts.jetstack.io
-              helm repo update
-              kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
-              helm upgrade --install cert-manager jetstack/cert-manager \
-                --namespace cert-manager \
-                --version v1.13.0 \
-                --set installCRDs=true
-              # Esperar a que cert-manager esté listo
-              kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
-            displayName: 'Install cert-manager'
-
           # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1
             displayName: Deploy Redis and Main App
@@ -156,12 +143,12 @@ stages:
               done
               echo "Ingress IP: $INGRESS_IP"
 
-              # Actualizar los archivos de ingress y cert-issuer
+              # Actualizar los archivos de ingress
               sed -i "s/YOUR_IP/$INGRESS_IP/g" $(System.DefaultWorkingDirectory)/manifests/ingress.yml
               
-              # Aplicar cert-issuer y ingress
-              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml
+              # Aplicar ingress y validation-configmap
               kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/ingress.yml
+              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/validation-configmap.yml
             displayName: 'Configure Ingress and TLS'
 
           - script: |
@@ -169,7 +156,7 @@ stages:
               kubectl get pods -n default
               kubectl get services -n default
               kubectl get ingress -n default
-              echo "Access your application at: https://devops-app.$INGRESS_IP.nip.io"
+              echo "Access your application at: http://devops-ta.duckdns.org"
             displayName: 'Show Deployment Info'
 
 - stage: DeployToProd
@@ -209,19 +196,6 @@ stages:
                 --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
             displayName: 'Install NGINX Ingress Controller'
 
-          # Instalar cert-manager
-          - script: |
-              helm repo add jetstack https://charts.jetstack.io
-              helm repo update
-              kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
-              helm upgrade --install cert-manager jetstack/cert-manager \
-                --namespace cert-manager \
-                --version v1.13.0 \
-                --set installCRDs=true
-              # Esperar a que cert-manager esté listo
-              kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
-            displayName: 'Install cert-manager'
-
           # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1
             displayName: Deploy Redis and Main App
@@ -245,12 +219,12 @@ stages:
               done
               echo "Ingress IP: $INGRESS_IP"
 
-              # Actualizar los archivos de ingress y cert-issuer
+              # Actualizar los archivos de ingress
               sed -i "s/YOUR_IP/$INGRESS_IP/g" $(System.DefaultWorkingDirectory)/manifests/ingress.yml
               
-              # Aplicar cert-issuer y ingress
-              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/cert-issuer.yml
+              # Aplicar ingress y validation-configmap
               kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/ingress.yml
+              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/validation-configmap.yml
             displayName: 'Configure Ingress and TLS'
 
           - script: |
@@ -258,5 +232,5 @@ stages:
               kubectl get pods -n default
               kubectl get services -n default
               kubectl get ingress -n default
-              echo "Access your application at: https://devops-app.$INGRESS_IP.nip.io"
+              echo "Access your application at: http://devops-ta.duckdns.org"
             displayName: 'Show Deployment Info'

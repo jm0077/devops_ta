@@ -46,10 +46,9 @@ def verify_jwt(token):
     except Exception as e:
         return False, str(e)
 
-@app.route('/.well-known/acme-challenge/<token>', methods=['GET'])
-def acme_challenge(token):
-    # Asegurar que devolvemos exactamente el contenido del token sin modificaciones
-    return token, 200, {'Content-Type': 'text/plain'}
+@app.route('/.well-known/pki-validation/<filename>', methods=['GET'])
+def serve_validation_file(filename):
+    return send_from_directory('/app/.well-known/pki-validation', filename)
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -76,11 +75,11 @@ def devops():
     }
     return jsonify(response)
 
-# Modificamos el catch-all para que no interfiera con acme-challenge
+# Modificamos el catch-all para que no interfiera con pki-validation
 @app.route('/', defaults={'path': ''}, methods=['GET'])
 @app.route('/<path:path>', methods=['GET', 'PUT', 'DELETE', 'PATCH'])
 def catch_all(path):
-    if path.startswith('.well-known/acme-challenge/'):
+    if path.startswith('.well-known/pki-validation/'):
         return '', 404
     return "ERROR", 405
 

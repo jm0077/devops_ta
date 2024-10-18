@@ -6,17 +6,15 @@ metadata:
   namespace: default
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
 spec:
-  tls:
-  - hosts:
-    - devops-app.51.8.242.226.nip.io
-    secretName: devops-app-tls
   rules:
-  - host: devops-app.51.8.242.226.nip.io
+  - host: devops-ta.duckdns.org
     http:
       paths:
       - path: /
@@ -26,3 +24,4 @@ spec:
             name: microservice-service
             port:
               number: 80
+  tls: []

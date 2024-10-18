@@ -4,7 +4,7 @@ import sys
 import os
 import jwt
 import redis
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 
 # Añadir el directorio src al path de Python
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
@@ -79,16 +79,15 @@ class TestDevOpsEndpoint(unittest.TestCase):
 
     def test_invalid_method(self):
         response = self.app.get('/DevOps')
-        self.assertEqual(response.status_code, 405)  # Cambiado de 400 a 405
-        self.assertEqual(response.data.decode(), "ERROR")  # Actualizado el mensaje esperado
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.data.decode(), "ERROR")
 
-    def test_acme_challenge(self):
-        """Test the ACME challenge endpoint"""
-        token = "test-token"
-        response = self.app.get(f'/.well-known/acme-challenge/{token}')
+    @patch('app.send_from_directory')
+    def test_serve_validation_file(self, mock_send):
+        mock_send.return_value = "test content"
+        response = self.app.get('/.well-known/pki-validation/testfile.txt')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data.decode(), token)
-        self.assertEqual(response.content_type, 'text/plain')
+        mock_send.assert_called_once_with('/app/.well-known/pki-validation', 'testfile.txt')
 
 if __name__ == '__main__':
     unittest.main()

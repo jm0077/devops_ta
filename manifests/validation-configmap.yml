@@ -1,0 +1,10 @@
+# manifests/validation-configmap.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pki-validation-file
+data:
+  623A372EEC0522AF349A38D329AEFA54.txt: |
+    4C81F80B3A5A88DDF79F397F53F92DBD30273EB531B9709C33CDEDBDC61B53FF
+    comodoca.com
+    d9cf4dd628b3140
