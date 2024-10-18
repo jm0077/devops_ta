@@ -46,9 +46,10 @@ def verify_jwt(token):
     except Exception as e:
         return False, str(e)
 
-@app.route('/.well-known/acme-challenge/<path:path>', methods=['GET'])
-def acme_challenge(path):
-    return '', 200  # Cambia a 200 para permitir la validación
+@app.route('/.well-known/acme-challenge/<token>', methods=['GET'])
+def acme_challenge(token):
+    # El token es el path parameter que llega en la URL
+    return f"{token}", 200
 
 @app.route('/health', methods=['GET'])
 def health_check():

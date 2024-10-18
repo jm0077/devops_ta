@@ -12,7 +12,11 @@ Este proyecto implementa un microservicio REST con un endpoint `/DevOps` utiliza
 │   └── test_app.py
 ├── manifests/
 │   ├── deployment.yml
-│   └── service.yml
+│   ├── service.yml
+│   ├── cert-issuer.yml
+│   ├── ingress.yml
+│   ├── redis-deployment.yml
+│   └── redis-service.yml
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
