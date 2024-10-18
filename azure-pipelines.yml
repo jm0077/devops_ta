@@ -126,8 +126,16 @@ stages:
               connectionType: 'Kubernetes Service Connection'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
-              command: 'create'
-              arguments: 'secret generic jwt-secret --from-literal=JWT_SECRET=$(JWT_SECRET) --dry-run=client -o yaml | kubectl apply -f -'
+              command: 'apply'
+              useConfigurationFile: true
+              inline: |
+                apiVersion: v1
+                kind: Secret
+                metadata:
+                  name: jwt-secret
+                type: Opaque
+                stringData:
+                  JWT_SECRET: $(JWT_SECRET)
 
           # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1
@@ -211,8 +219,16 @@ stages:
               connectionType: 'Kubernetes Service Connection'
               kubernetesServiceEndpoint: 'devops-ta-aks-connection'
               namespace: 'default'
-              command: 'create'
-              arguments: 'secret generic jwt-secret --from-literal=JWT_SECRET=$(JWT_SECRET) --dry-run=client -o yaml | kubectl apply -f -'
+              command: 'apply'
+              useConfigurationFile: true
+              inline: |
+                apiVersion: v1
+                kind: Secret
+                metadata:
+                  name: jwt-secret
+                type: Opaque
+                stringData:
+                  JWT_SECRET: $(JWT_SECRET)
 
           # Desplegar Redis y la aplicación principal
           - task: Kubernetes@1
