@@ -48,7 +48,7 @@ def verify_jwt(token):
 
 @app.route('/.well-known/acme-challenge/<path:path>', methods=['GET'])
 def acme_challenge(path):
-    return '', 404  # Permite que cert-manager maneje esta ruta
+    return '', 200  # Cambia a 200 para permitir la validación
 
 @app.route('/health', methods=['GET'])
 def health_check():

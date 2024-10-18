@@ -7,7 +7,7 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "nginx"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"  # Importante: permitir HTTP para la validación
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
     acme.cert-manager.io/http01-edit-in-place: "true"
 spec:
   tls:
@@ -24,4 +24,4 @@ spec:
           service:
             name: microservice-service
             port:
-              number: 5000
+              number: 80
