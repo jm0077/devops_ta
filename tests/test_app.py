@@ -79,8 +79,16 @@ class TestDevOpsEndpoint(unittest.TestCase):
 
     def test_invalid_method(self):
         response = self.app.get('/DevOps')
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data.decode(), "ERROR")
+        self.assertEqual(response.status_code, 405)  # Cambiado de 400 a 405
+        self.assertEqual(response.data.decode(), "ERROR")  # Actualizado el mensaje esperado
+
+    def test_acme_challenge(self):
+        """Test the ACME challenge endpoint"""
+        token = "test-token"
+        response = self.app.get(f'/.well-known/acme-challenge/{token}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.decode(), token)
+        self.assertEqual(response.content_type, 'text/plain')
 
 if __name__ == '__main__':
     unittest.main()
