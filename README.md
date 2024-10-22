@@ -13,7 +13,6 @@ Este proyecto implementa un microservicio REST con un endpoint `/DevOps` utiliza
 ├── manifests/
 │   ├── deployment.yml
 │   ├── service.yml
-│   ├── cert-issuer.yml
 │   ├── ingress.yml
 │   ├── redis-deployment.yml
 │   └── redis-service.yml
