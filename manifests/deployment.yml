@@ -42,9 +42,6 @@ spec:
             secretKeyRef:
               name: jwt-secret
               key: JWT_SECRET
-        volumeMounts:
-        - name: pki-validation
-          mountPath: /app/.well-known/pki-validation
         startupProbe:
           httpGet:
             path: /health
@@ -67,9 +64,5 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
           allowPrivilegeEscalation: false
-      volumes:
-      - name: pki-validation
-        configMap:
-          name: pki-validation-file
       imagePullSecrets:
       - name: acr-auth-secret
