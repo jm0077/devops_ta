@@ -68,7 +68,7 @@ stages:
         docker buildx use mybuilder
         
         # Login to ACR usando las variables de Azure
-        echo $(ACR_ADMIN_PASSWORD) | docker login $(ACR_LOGIN_SERVER) -u $(ACR_ADMIN_USERNAME) --password-stdin
+        docker login "$(ACR_LOGIN_SERVER)" -u "$(ACR_ADMIN_USERNAME)" -p "$(ACR_ADMIN_PASSWORD)"
         
         # Build y push de la imagen multi-arquitectura
         docker buildx build --platform linux/amd64,linux/arm64 \
