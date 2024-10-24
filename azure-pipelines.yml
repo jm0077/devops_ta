@@ -27,7 +27,7 @@ stages:
     - script: |
         source venv/bin/activate
         export PYTHONPATH=$(pwd)/src:$PYTHONPATH
-        pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=src --cov-report=xml --cov-report=html
+        pytest tests --doctest-modules --junitxml=junit/test-results.xml --cov=src --cov-report=xml --cov-report=html --cov-config=.coveragerc
       displayName: 'Run tests'
     
     - task: PublishTestResults@2
@@ -50,10 +50,13 @@ stages:
         configMode: 'manual'
         cliProjectKey: 'dmsstaging01_dmsstaging01'
         cliProjectName: 'dmsstaging01'
-        cliSources: '.'
+        cliSources: 'src'
         extraProperties: |
+          sonar.coverage.exclusions=tests/**/*,**/test_*.py
           sonar.python.coverage.reportPaths=coverage.xml
           sonar.python.xunit.reportPath=junit/test-results.xml
+          sonar.sources=src
+          sonar.tests=tests
     
     - task: SonarCloudAnalyze@1
     
